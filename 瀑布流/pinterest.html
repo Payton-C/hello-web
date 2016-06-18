@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>无标题文档</title>
+<style type="text/css">
+*{
+	margin:0;
+	padding:0;
+}
+#container{
+	margin:50px auto 0;
+	position:relative;
+	width:1000px;
+	border:1px solid #F00;
+}
+#container img{
+	position:absolute;
+}
+#loader{
+	width:100%;
+	height:60px;
+	background:url('images/loader.gif') no-repeat center #FFF;
+	background-size:60px 60px;
+	-moz-background-size:60px 60px;
+	position:fixed;
+	left:0;
+	bottom:0;
+}
+</style>
+</head>
+
+<body>
+<div id="container"></div>
+<div id="loader"></div>
+<script src="http://libs.baidu.com/jquery/1.9.0/jquery.js"></script>
+</body>
+<script type="text/javascript">
+$(function(){
+	var oContainer=$("#container");
+	var oLoader=$("#loader");
+	var iWidth=200;
+	var iSpace=10;
+	var iOuterWidth=iWidth+iSpace;
+	var cols=0;
+	var sUrl='http://www.wookmark.com/api/json/popular?callback=?';
+	var iPage=0;
+	var arrT=[];
+	var arrL=[];
+	var flag=true;
+	function setCols(){
+		cols=Math.floor($(window).innerWidth()/iOuterWidth);
+		if(cols<3){
+			cols=3;
+		}
+		else if(cols>6){
+			cols=6;
+		}
+		oContainer.css('width',iOuterWidth*cols-iSpace);
+	}
+	setCols();
+	for(var i=0;i<cols;i++){
+		arrT.push(0);
+		arrL.push(i*iOuterWidth);
+	}
+	function getData(){
+		if(flag){
+			flag=false;
+			oLoader.show();
+			$.getJSON(sUrl,'page='+iPage,function(data){
+				$.each(data,function(index,obj){
+					if(obj.width!=0){
+						var oImg=$("<img/>");
+						oImg.attr('src',obj.preview).appendTo(oContainer);
+						//防止图片未加载完成引起的定位错误
+						var iHeight=iWidth/obj.width*obj.height;
+						oImg.css({
+							width:iWidth,
+							height:iHeight
+						});
+						//获取最低一列的索引
+						var iMinIndex=getMin();
+						oImg.css({
+							left:arrL[iMinIndex],
+							top:arrT[iMinIndex]
+						});
+						arrT[iMinIndex]+=iHeight+=10;//累加高度以及附加边距
+						oLoader.hide();
+						flag=true;
+					}
+				});
+			});	
+			iPage++;
+		}
+	};
+	getData();
+	//滚动加载图片
+	$(window).on('scroll',function(){
+		var sH=$(window).scrollTop()+$(window).innerHeight();
+		var iMinIndex=getMin();
+		if(arrT[iMinIndex]+oContainer.offset().top<sH){
+			getData();	
+		}
+	});
+	//浏览器改变视口时自适应
+	$(window).on('resize',function(){
+		var oldCols=cols;
+		setCols();
+		if(cols==oldCols){
+			return
+		}
+		arrT=[];
+		arrL=[];
+		for(var i=0;i<cols;i++){
+			arrT[i]=0;
+			arrL[i]=i*iOuterWidth;
+		}
+		var oImgs=oContainer.find('img');
+		oImgs.each(function() {
+			$(this).stop();
+            var iMinIndex=getMin();
+			/*$(this).css({
+				left:arrL[iMinIndex],
+				top:arrT[iMinIndex]
+			});*/
+			$(this).animate({
+				left:arrL[iMinIndex],
+				top:arrT[iMinIndex]
+			});
+			arrT[iMinIndex]+=$(this).height()+10;
+        });
+	});
+	//获取最低的一列的索引
+	function getMin(){
+		var min=arrT[0];
+		var index=0;
+		for(var i=1;i<arrT.length;i++){
+			if(arrT[i]<min){
+				min=arrT[i];
+				index=i;
+			}
+		}
+		return index;
+	}
+})
+</script>
+</html>
